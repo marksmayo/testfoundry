@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestFoundry</title>
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="/static/logo.png" alt="TestFoundry Logo" class="logo">
+                    <h1>TestFoundry</h1>
+                </div>
+                <p>Generate comprehensive test automation frameworks for your websites</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Configuration Form -->
+            <div class="card" id="configCard">
+                <div class="card-header">
+                    <h2><i class="fas fa-cog"></i> Configuration</h2>
+                    <div class="preset-controls">
+                        <label for="presetSelect">Quick Start:</label>
+                        <select id="presetSelect">
+                            <option value="">Custom Configuration</option>
+                        </select>
+                        <button type="button" id="loadPresetBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-magic"></i> Load Preset
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="generatorForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="projectName">Project Name <span class="required">*</span></label>
+                                <input type="text" id="projectName" name="project_name" required 
+                                       placeholder="my_website_tests" pattern="[a-zA-Z0-9_-]+">
+                                <small class="help-text">3-50 characters, letters, numbers, hyphens, and underscores only</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="siteName">Site Name <span class="required">*</span></label>
+                                <input type="text" id="siteName" name="site_name" required 
+                                       placeholder="My Website">
+                                <small class="help-text">Display name for documentation</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="baseUrl">Base URL <span class="required">*</span></label>
+                            <input type="url" id="baseUrl" name="base_url" required 
+                                   placeholder="https://example.com">
+                            <small class="help-text">The main URL of your website to test</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="section-label">Test Types</label>
+                            <div class="checkbox-grid">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="accessibility" name="test_types" value="accessibility">
+                                    <label for="accessibility">
+                                        <i class="fas fa-universal-access"></i>
+                                        <span>Accessibility Testing</span>
+                                        <small>WCAG compliance and a11y audits</small>
+                                    </label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="lighthouse" name="test_types" value="lighthouse">
+                                    <label for="lighthouse">
+                                        <i class="fas fa-tachometer-alt"></i>
+                                        <span>Performance Testing</span>
+                                        <small>Lighthouse audits and Core Web Vitals</small>
+                                    </label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="brokenLinks" name="test_types" value="broken_links">
+                                    <label for="brokenLinks">
+                                        <i class="fas fa-link"></i>
+                                        <span>Broken Links</span>
+                                        <small>Link validation and health checks</small>
+                                    </label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="seo" name="test_types" value="seo">
+                                    <label for="seo">
+                                        <i class="fas fa-search"></i>
+                                        <span>SEO Testing</span>
+                                        <small>Meta tags, schema, and SEO audits</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="htmlReports" name="html_reports" checked>
+                                    <label for="htmlReports">
+                                        <i class="fas fa-chart-bar"></i>
+                                        <span>Generate HTML Reports</span>
+                                        <small>Beautiful test reports with screenshots</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="githubActions" name="github_actions">
+                                    <label for="githubActions">
+                                        <i class="fab fa-github"></i>
+                                        <span>GitHub Actions CI/CD</span>
+                                        <small>Automated testing workflows</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="validateBtn" class="btn btn-secondary">
+                                <i class="fas fa-check-circle"></i> Validate Configuration
+                            </button>
+                            <button type="submit" id="generateBtn" class="btn btn-primary">
+                                <i class="fas fa-rocket"></i> Generate Framework
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Validation Results -->
+            <div class="card hidden" id="validationCard">
+                <div class="card-header">
+                    <h3><i class="fas fa-clipboard-check"></i> Validation Results</h3>
+                </div>
+                <div class="card-body" id="validationResults">
+                    <!-- Validation content will be populated here -->
+                </div>
+            </div>
+
+            <!-- Progress Tracking -->
+            <div class="card hidden" id="progressCard">
+                <div class="card-header">
+                    <h3><i class="fas fa-tasks"></i> Generation Progress</h3>
+                    <div class="progress-header">
+                        <span id="progressText">Initializing...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-steps" id="progressSteps">
+                        <!-- Steps will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="card hidden" id="resultsCard">
+                <div class="card-header">
+                    <h3><i class="fas fa-check-circle"></i> Generation Complete</h3>
+                    <div class="result-actions">
+                        <button type="button" id="downloadBtn" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download Project
+                        </button>
+                        <button type="button" id="newProjectBtn" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i> New Project
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="result-summary" id="resultSummary">
+                        <!-- Summary will be populated here -->
+                    </div>
+                    <div class="file-explorer" id="fileExplorer">
+                        <!-- File tree will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 TestFoundry. Built with FastAPI and Playwright.</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

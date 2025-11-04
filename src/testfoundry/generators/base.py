@@ -1,0 +1,89 @@
+"""
+Base generator class and common utilities.
+Provides shared functionality for all specific generators.
+"""
+
+import os
+import shutil
+from pathlib import Path
+from typing import List
+from ..config.models import GeneratorConfig
+
+
+class BaseGenerator:
+    """Base class for all generators"""
+    
+    def __init__(self, config: GeneratorConfig):
+        self.config = config
+        
+    def create_directory_structure(self, project_path: Path) -> None:
+        """Create the basic directory structure"""
+        directories = [
+            project_path,
+            project_path / "tests",
+            project_path / "tests" / "accessibility",
+            project_path / "tests" / "lighthouse", 
+            project_path / "tests" / "broken_links",
+            project_path / "tests" / "seo",
+            project_path / "pages",
+            project_path / "utils",
+            project_path / "reports",
+            project_path / "config",
+            project_path / "assets",
+            project_path / ".github" / "workflows"
+        ]
+        
+        for directory in directories:
+            directory.mkdir(parents=True, exist_ok=True)
+            
+        # Create __init__.py files for Python packages
+        init_files = [
+            project_path / "tests" / "__init__.py",
+            project_path / "pages" / "__init__.py", 
+            project_path / "utils" / "__init__.py",
+            project_path / "config" / "__init__.py"
+        ]
+        
+        for init_file in init_files:
+            init_file.touch()
+    
+    def write_file(self, file_path: Path, content: str) -> None:
+        """Write content to file with UTF-8 encoding"""
+        file_path.write_text(content, encoding='utf-8')
+    
+    def copy_logo_file(self, project_path: Path) -> None:
+        """Copy TestFoundry logo to the project"""
+        # Find the logo file relative to this generator
+        generator_root = Path(__file__).parent.parent.parent.parent
+        logo_source = generator_root / "logo.png"
+        
+        if logo_source.exists():
+            logo_dest = project_path / "assets" / "logo.png"
+            logo_dest.parent.mkdir(exist_ok=True)
+            shutil.copy2(logo_source, logo_dest)
+    
+    def get_requirements(self) -> List[str]:
+        """Get list of requirements based on configuration"""
+        requirements = [
+            "pytest>=7.4.0",
+            "pytest-html>=3.2.0",
+            "pytest-xdist>=3.3.0",
+            "playwright>=1.40.0",
+            "pytest-playwright>=0.4.0",
+            "requests>=2.31.0",
+            "beautifulsoup4>=4.12.0",
+            "lxml>=4.9.0"
+        ]
+        
+        if self.config.include_accessibility:
+            requirements.extend([
+                "axe-playwright>=0.1.3",
+                "pytest-axe>=1.0.0"
+            ])
+            
+        if self.config.include_lighthouse:
+            requirements.extend([
+                "python-lighthouse>=0.7.0"
+            ])
+            
+        return sorted(requirements)

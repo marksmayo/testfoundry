@@ -1,0 +1,213 @@
+name: Test Automation for Example Website
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test with'
+        required: false
+        default: 'chromium'
+        type: choice
+        options:
+        - chromium
+        - firefox
+        - webkit
+        - all
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Install Playwright browsers
+      run: playwright install --with-deps ${{ matrix.browser }}
+      
+    - name: Run smoke tests
+      run: |
+        pytest tests/test_basic.py \
+          --browser ${{ matrix.browser }} \
+          --html=reports/smoke-report-${{ matrix.browser }}.html \
+          --self-contained-html \
+          -v
+          
+    - name: Run accessibility tests
+      run: |
+        pytest tests/accessibility/ \
+          --browser ${{ matrix.browser }} \
+          --html=reports/accessibility-report-${{ matrix.browser }}.html \
+          --self-contained-html \
+          -v\n\n    - name: Run performance tests
+      run: |
+        pytest tests/lighthouse/ \
+          --browser ${{ matrix.browser }} \
+          --html=reports/performance-report-${{ matrix.browser }}.html \
+          --self-contained-html \
+          -v\n\n    - name: Run broken links tests
+      run: |
+        pytest tests/broken_links/ \
+          --browser ${{ matrix.browser }} \
+          --html=reports/broken-links-report-${{ matrix.browser }}.html \
+          --self-contained-html \
+          -v\n\n    - name: Run SEO tests
+      run: |
+        pytest tests/seo/ \
+          --browser ${{ matrix.browser }} \
+          --html=reports/seo-report-${{ matrix.browser }}.html \
+          --self-contained-html \
+          -v
+          
+    - name: Upload test reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-reports-${{ matrix.browser }}
+        path: |
+          reports/
+          
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: screenshots-${{ matrix.browser }}
+        path: reports/screenshots/
+
+  accessibility-audit:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[accessibility]') || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Install Playwright browsers
+      run: playwright install --with-deps chromium
+      
+    - name: Run accessibility audit
+      run: |
+        pytest tests/accessibility/ \
+          --browser chromium \
+          --html=reports/accessibility-audit.html \
+          --self-contained-html \
+          -v
+        
+    - name: Upload accessibility report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: accessibility-report
+        path: reports/
+
+  performance-audit:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[performance]') || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        npm install -g lighthouse
+        
+    - name: Install Playwright browsers
+      run: playwright install --with-deps chromium
+      
+    - name: Run performance audit
+      run: |
+        pytest tests/lighthouse/ \
+          --browser chromium \
+          --html=reports/performance-audit.html \
+          --self-contained-html \
+          -v
+        
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-report
+        path: reports/
+
+  link-validation:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[links]') || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Install Playwright browsers
+      run: playwright install --with-deps chromium
+      
+    - name: Run link validation
+      run: |
+        pytest tests/broken_links/ \
+          --browser chromium \
+          --html=reports/link-validation.html \
+          --self-contained-html \
+          -v
+        
+    - name: Upload link validation report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: link-validation-report
+        path: reports/
