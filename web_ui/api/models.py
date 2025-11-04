@@ -24,18 +24,18 @@ class GeneratorRequest(BaseModel):
     test_types: List[TestType] = Field(default=[], description="Test types to include")
     html_reports: bool = Field(default=True, description="Generate HTML reports")
     github_actions: bool = Field(default=False, description="Generate GitHub Actions workflow")
-    
+
     @validator('project_name')
     def validate_project_name(cls, v):
         """Validate project name format"""
         import re
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Project name can only contain letters, numbers, hyphens, and underscores')
-        
+
         reserved_names = {'test', 'tests', 'src', 'lib', 'bin', 'config', 'utils', 'pages'}
         if v.lower() in reserved_names:
             raise ValueError(f"'{v}' is a reserved name, please choose a different name")
-        
+
         return v
 
 
@@ -79,6 +79,8 @@ class GenerationProgress(BaseModel):
     message: Optional[str] = None
     error: Optional[str] = None
     created_files: List[str] = []
+    project_name: Optional[str] = None
+    project_path: Optional[str] = None
 
 
 class GenerationResponse(BaseModel):

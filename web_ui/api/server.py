@@ -10,6 +10,7 @@ import uuid
 import platform
 import shutil
 import zipfile
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -18,7 +19,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocke
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, Response
 from starlette.middleware.cors import CORSMiddleware
 
 # Add src to Python path for imports
@@ -120,7 +121,7 @@ async def get_system_info():
             )
         )
     ]
-    
+
     return SystemInfo(
         python_version=platform.python_version(),
         platform=platform.system(),
@@ -145,27 +146,27 @@ async def validate_configuration(request: GeneratorRequest):
             html_reports=request.html_reports,
             github_actions=request.github_actions
         )
-        
+
         return ValidationResponse(valid=True, errors=[], suggestions=[])
-        
+
     except ValueError as e:
         # Parse validation errors
         error_message = str(e)
         errors = []
-        
+
         if "Project name" in error_message:
             errors.append(ValidationError(field="project_name", message="Invalid project name format"))
         if "Site name" in error_message:
             errors.append(ValidationError(field="site_name", message="Invalid site name"))
         if "Base URL" in error_message:
             errors.append(ValidationError(field="base_url", message="Invalid URL format"))
-        
+
         suggestions = [
             "Project names should be 3-50 characters, alphanumeric with hyphens/underscores",
             "URLs must start with http:// or https://",
             "Avoid reserved names like 'test', 'src', 'config'"
         ]
-        
+
         return ValidationResponse(valid=False, errors=errors, suggestions=suggestions)
 
 
@@ -185,15 +186,16 @@ async def generate_framework(request: GeneratorRequest, background_tasks: Backgr
             html_reports=request.html_reports,
             github_actions=request.github_actions
         )
-        
+
         # Generate unique job ID
         job_id = str(uuid.uuid4())
-        
+
         # Initialize job tracking
         generation_jobs[job_id] = GenerationProgress(
             job_id=job_id,
             status=GenerationStatus.PENDING,
             total_steps=6,
+            project_name=config.project_name,
             steps=[
                 GenerationStep(name="Creating directory structure", status=GenerationStatus.PENDING),
                 GenerationStep(name="Generating core framework files", status=GenerationStatus.PENDING),
@@ -203,16 +205,16 @@ async def generate_framework(request: GeneratorRequest, background_tasks: Backgr
                 GenerationStep(name="Generating CI/CD configuration", status=GenerationStatus.PENDING),
             ]
         )
-        
+
         # Start generation in background
         background_tasks.add_task(run_generation, job_id, config)
-        
+
         return GenerationResponse(
             job_id=job_id,
             status=GenerationStatus.PENDING,
             message="Framework generation started"
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -222,85 +224,102 @@ async def run_generation(job_id: str, config: GeneratorConfig):
     try:
         job = generation_jobs[job_id]
         job.status = GenerationStatus.RUNNING
-        
+
         # Notify connected websockets
         await notify_websockets(job_id, job)
-        
+
         # Create generator
         generator = FrameworkGenerator()
-        
+
         # Simulate step-by-step generation with progress updates
         project_path = Path(config.project_name)
-        
+
         # Step 1: Create directory structure
         await update_step(job_id, 0, GenerationStatus.RUNNING, "Creating directories...")
+        await asyncio.sleep(0.1)  # Small delay for visual feedback
         from testfoundry.generators.base import BaseGenerator
         base_generator = BaseGenerator(config)
         base_generator.create_directory_structure(project_path)
         await update_step(job_id, 0, GenerationStatus.COMPLETED, "Directories created")
-        
+        await asyncio.sleep(0.1)
+
         # Step 2: Core files
         await update_step(job_id, 1, GenerationStatus.RUNNING, "Generating pytest config and page objects...")
+        await asyncio.sleep(0.1)
         from testfoundry.generators.core_generator import CoreGenerator
         core_generator = CoreGenerator(config)
         core_generator.generate_all_core_files(project_path)
         await update_step(job_id, 1, GenerationStatus.COMPLETED, "Core files generated")
-        
+        await asyncio.sleep(0.1)
+
         # Step 3: Test files
         await update_step(job_id, 2, GenerationStatus.RUNNING, "Generating test files...")
+        await asyncio.sleep(0.1)
         from testfoundry.generators.test_generator import TestGenerator
         test_generator = TestGenerator(config)
         test_generator.generate_all_tests(project_path)
         await update_step(job_id, 2, GenerationStatus.COMPLETED, "Test files generated")
-        
+        await asyncio.sleep(0.1)
+
         # Step 4: Utilities
         await update_step(job_id, 3, GenerationStatus.RUNNING, "Generating utilities...")
+        await asyncio.sleep(0.1)
         from testfoundry.generators.utils_generator import UtilsGenerator
         utils_generator = UtilsGenerator(config)
         utils_generator.generate_all_utils(project_path)
         await update_step(job_id, 3, GenerationStatus.COMPLETED, "Utilities generated")
-        
+        await asyncio.sleep(0.1)
+
         # Step 5: Documentation
         await update_step(job_id, 4, GenerationStatus.RUNNING, "Generating README and docs...")
+        await asyncio.sleep(0.1)
         from testfoundry.generators.docs_generator import DocsGenerator
         docs_generator = DocsGenerator(config)
         docs_generator.generate_all_docs(project_path)
         await update_step(job_id, 4, GenerationStatus.COMPLETED, "Documentation generated")
-        
+        await asyncio.sleep(0.1)
+
         # Step 6: CI/CD (if enabled)
         if config.github_actions:
             await update_step(job_id, 5, GenerationStatus.RUNNING, "Generating GitHub Actions...")
+            await asyncio.sleep(0.1)
             from testfoundry.generators.cicd_generator import CICDGenerator
             cicd_generator = CICDGenerator(config)
             cicd_generator.generate_all_cicd(project_path)
             await update_step(job_id, 5, GenerationStatus.COMPLETED, "CI/CD generated")
         else:
             await update_step(job_id, 5, GenerationStatus.COMPLETED, "CI/CD skipped")
-        
-        # Collect created files
+        await asyncio.sleep(0.1)
+
+        # Collect created files with delay for visual feedback
         created_files = []
         if project_path.exists():
+            file_count = 0
             for file_path in project_path.rglob("*"):
                 if file_path.is_file():
                     rel_path = file_path.relative_to(project_path)
                     created_files.append(str(rel_path))
-        
+                    file_count += 1
+                    # Add delay between files for visual feedback
+                    await asyncio.sleep(0.1)
+
         # Mark job as completed
         job.status = GenerationStatus.COMPLETED
         job.progress_percent = 100
         job.current_step = job.total_steps
         job.created_files = created_files
+        job.project_path = str(project_path.absolute())
         job.message = f"Framework generated successfully with {len(created_files)} files"
-        
+
         await notify_websockets(job_id, job)
-        
+
     except Exception as e:
         # Mark job as failed
         job = generation_jobs[job_id]
         job.status = GenerationStatus.FAILED
         job.error = str(e)
         job.message = f"Generation failed: {e}"
-        
+
         await notify_websockets(job_id, job)
 
 
@@ -310,12 +329,12 @@ async def update_step(job_id: str, step_index: int, status: GenerationStatus, me
     job.steps[step_index].status = status
     job.steps[step_index].message = message
     job.steps[step_index].timestamp = datetime.now().isoformat()
-    
+
     # Update overall progress
     completed_steps = sum(1 for step in job.steps if step.status == GenerationStatus.COMPLETED)
     job.current_step = completed_steps
     job.progress_percent = int((completed_steps / job.total_steps) * 100)
-    
+
     await notify_websockets(job_id, job)
 
 
@@ -327,7 +346,7 @@ async def notify_websockets(job_id: str, job: GenerationProgress):
             await websocket.send_json(job.dict())
         except:
             disconnected.append(conn_id)
-    
+
     # Clean up disconnected websockets
     for conn_id in disconnected:
         websocket_connections.pop(conn_id, None)
@@ -338,7 +357,7 @@ async def get_job_status(job_id: str):
     """Get status of a generation job"""
     if job_id not in generation_jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     return generation_jobs[job_id]
 
 
@@ -347,61 +366,53 @@ async def get_project_files(job_id: str):
     """Get list of generated files for a job"""
     if job_id not in generation_jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = generation_jobs[job_id]
     if job.status != GenerationStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
-    
-    # Find the project directory (assumes job creates directory with project name)
-    project_path = None
-    for file_path in job.created_files:
-        if "/" not in file_path and "\\\\" not in file_path:  # Top-level files
-            project_name = Path(file_path).stem
-            potential_path = Path(project_name)
-            if potential_path.exists() and potential_path.is_dir():
-                project_path = potential_path
-                break
-    
-    if not project_path:
-        # Try to infer from any file path
-        if job.created_files:
-            first_file = job.created_files[0]
-            project_path = Path(first_file).parent
-    
+
+    # Get project directory from stored project name
+    if not job.project_name:
+        raise HTTPException(status_code=404, detail="Project name not found in job")
+
+    project_path = Path(job.project_name)
+
+    if not project_path.exists() or not project_path.is_dir():
+        raise HTTPException(status_code=404, detail=f"Project directory '{project_path}' not found")
+
     files = []
     total_size = 0
-    
-    if project_path and project_path.exists():
-        for file_path in project_path.rglob("*"):
-            rel_path = file_path.relative_to(project_path)
-            
-            if file_path.is_file():
-                size = file_path.stat().st_size
-                total_size += size
-                
-                # Get content preview for small text files
-                content_preview = None
-                if size < 1000 and file_path.suffix in ['.py', '.txt', '.md', '.yml', '.yaml', '.json']:
-                    try:
-                        content_preview = file_path.read_text(encoding='utf-8')[:500]
-                    except:
-                        pass
-                
-                files.append(FileInfo(
-                    path=str(rel_path),
-                    name=file_path.name,
-                    size=size,
-                    type="file",
-                    content_preview=content_preview
-                ))
-            else:
-                files.append(FileInfo(
-                    path=str(rel_path),
-                    name=file_path.name,
-                    size=0,
-                    type="directory"
-                ))
-    
+
+    for file_path in project_path.rglob("*"):
+        rel_path = file_path.relative_to(project_path)
+
+        if file_path.is_file():
+            size = file_path.stat().st_size
+            total_size += size
+
+            # Get content preview for small text files
+            content_preview = None
+            if size < 1000 and file_path.suffix in ['.py', '.txt', '.md', '.yml', '.yaml', '.json']:
+                try:
+                    content_preview = file_path.read_text(encoding='utf-8')[:500]
+                except:
+                    pass
+
+            files.append(FileInfo(
+                path=str(rel_path),
+                name=file_path.name,
+                size=size,
+                type="file",
+                content_preview=content_preview
+            ))
+        else:
+            files.append(FileInfo(
+                path=str(rel_path),
+                name=file_path.name,
+                size=0,
+                type="directory"
+            ))
+
     return ProjectStructure(
         project_name=str(project_path.name) if project_path else "unknown",
         files=files,
@@ -411,67 +422,81 @@ async def get_project_files(job_id: str):
 
 
 @app.get("/api/jobs/{job_id}/download")
-async def download_project(job_id: str):
+async def download_project(job_id: str, background_tasks: BackgroundTasks):
     """Download generated project as ZIP file"""
     if job_id not in generation_jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = generation_jobs[job_id]
     if job.status != GenerationStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
-    
-    # Create ZIP file
-    zip_path = Path(f"temp_{job_id}.zip")
-    
+
+    # Get project name from job
+    if not job.project_name:
+        raise HTTPException(status_code=404, detail="Project name not found in job")
+
+    project_path = Path(job.project_name)
+
+    if not project_path.exists() or not project_path.is_dir():
+        raise HTTPException(status_code=404, detail=f"Project directory '{project_path}' not found")
+
+    # Create ZIP file in a temporary location
+    temp_dir = Path(tempfile.gettempdir())
+    zip_path = temp_dir / f"testfoundry_{job_id}.zip"
+
     try:
-        project_path = None
-        if job.created_files:
-            # Infer project directory name
-            first_file = job.created_files[0]
-            project_name = first_file.split("/")[0] if "/" in first_file else first_file.split("\\\\")[0] if "\\\\" in first_file else first_file
-            project_path = Path(project_name)
-        
-        if not project_path or not project_path.exists():
-            raise HTTPException(status_code=404, detail="Project directory not found")
-        
+        # Create ZIP file
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file_path in project_path.rglob("*"):
                 if file_path.is_file():
+                    # Create archive name relative to project parent (includes project folder in zip)
                     arcname = file_path.relative_to(project_path.parent)
                     zipf.write(file_path, arcname)
-        
-        return FileResponse(
-            zip_path,
+
+        # Read the zip file into memory
+        zip_data = zip_path.read_bytes()
+
+        # Schedule cleanup after response is sent
+        def cleanup_zip():
+            if zip_path.exists():
+                zip_path.unlink(missing_ok=True)
+        background_tasks.add_task(cleanup_zip)
+
+        # Return response with zip data
+        return Response(
+            content=zip_data,
             media_type='application/zip',
-            filename=f"{project_path.name}.zip"
+            headers={
+                "Content-Disposition": f'attachment; filename="{project_path.name}.zip"'
+            }
         )
-    
-    finally:
-        # Clean up temporary zip file
+
+    except Exception as e:
+        # Clean up on error
         if zip_path.exists():
-            background_tasks = BackgroundTasks()
-            background_tasks.add_task(lambda: zip_path.unlink(missing_ok=True))
+            zip_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create ZIP file: {str(e)}")
 
 
 @app.websocket("/ws/{job_id}")
 async def websocket_endpoint(websocket: WebSocket, job_id: str):
     """WebSocket endpoint for real-time progress updates"""
     await websocket.accept()
-    
+
     # Generate connection ID
     conn_id = str(uuid.uuid4())
     websocket_connections[conn_id] = websocket
-    
+
     try:
         # Send current job status if it exists
         if job_id in generation_jobs:
             await websocket.send_json(generation_jobs[job_id].dict())
-        
+
         # Keep connection alive
         while True:
             # Wait for any message (ping/pong)
             await websocket.receive_text()
-            
+
     except WebSocketDisconnect:
         # Clean up connection
         websocket_connections.pop(conn_id, None)

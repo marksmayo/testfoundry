@@ -404,6 +404,27 @@ body {
     border-left: 4px solid #28a745;
 }
 
+.project-path {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    border: 1px solid #dee2e6;
+}
+
+.path-text {
+    display: block;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: #495057;
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
 .result-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -575,42 +596,42 @@ body {
     .container {
         padding: 10px;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
     }
-    
+
     .checkbox-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .card-header {
         flex-direction: column;
         align-items: stretch;
         gap: 1rem;
     }
-    
+
     .preset-controls {
         justify-content: center;
     }
-    
+
     .form-actions {
         flex-direction: column;
     }
-    
+
     .result-actions {
         justify-content: center;
     }
-    
+
     .logo-section {
         flex-direction: column;
         gap: 0.5rem;
     }
-    
+
     .logo {
         height: 60px;
     }
-    
+
     .header-content h1 {
         font-size: 2rem;
     }

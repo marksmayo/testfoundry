@@ -5,7 +5,7 @@ class TestFoundryUI {
         this.presets = [];
         this.currentJobId = null;
         this.websocket = null;
-        
+
         this.initializeApp();
     }
 
@@ -20,7 +20,7 @@ class TestFoundryUI {
             const response = await fetch('/api/system-info');
             const data = await response.json();
             this.presets = data.available_presets;
-            
+
             console.log('System info loaded:', data);
         } catch (error) {
             console.error('Failed to load system info:', error);
@@ -30,7 +30,7 @@ class TestFoundryUI {
 
     populatePresets() {
         const presetSelect = document.getElementById('presetSelect');
-        
+
         this.presets.forEach(preset => {
             const option = document.createElement('option');
             option.value = preset.name;
@@ -82,14 +82,14 @@ class TestFoundryUI {
     loadPreset() {
         const presetSelect = document.getElementById('presetSelect');
         const selectedPresetName = presetSelect.value;
-        
+
         if (!selectedPresetName) return;
 
         const preset = this.presets.find(p => p.name === selectedPresetName);
         if (!preset) return;
 
         const config = preset.config;
-        
+
         // Populate form fields
         document.getElementById('projectName').value = config.project_name;
         document.getElementById('siteName').value = config.site_name;
@@ -114,10 +114,10 @@ class TestFoundryUI {
     validateField(input) {
         const value = input.value.trim();
         const fieldName = input.name;
-        
+
         // Remove existing validation styling
         input.classList.remove('field-error', 'field-success');
-        
+
         if (!value && input.required) {
             input.classList.add('field-error');
             return false;
@@ -149,7 +149,7 @@ class TestFoundryUI {
         if (!config) return;
 
         this.showLoading();
-        
+
         try {
             const response = await fetch('/api/validate', {
                 method: 'POST',
@@ -161,7 +161,7 @@ class TestFoundryUI {
 
             const result = await response.json();
             this.displayValidationResults(result);
-            
+
         } catch (error) {
             console.error('Validation error:', error);
             this.showError('Failed to validate configuration');
@@ -173,7 +173,7 @@ class TestFoundryUI {
     displayValidationResults(result) {
         const validationCard = document.getElementById('validationCard');
         const resultsDiv = document.getElementById('validationResults');
-        
+
         let html = '';
 
         if (result.valid) {
@@ -218,7 +218,7 @@ class TestFoundryUI {
         if (!config) return;
 
         this.showLoading();
-        
+
         try {
             const response = await fetch('/api/generate', {
                 method: 'POST',
@@ -235,11 +235,11 @@ class TestFoundryUI {
 
             const result = await response.json();
             this.currentJobId = result.job_id;
-            
+
             this.hideLoading();
             this.showProgressTracking();
             this.connectWebSocket();
-            
+
         } catch (error) {
             console.error('Generation error:', error);
             this.showError(`Failed to start generation: ${error.message}`);
@@ -250,7 +250,7 @@ class TestFoundryUI {
     getFormData() {
         const form = document.getElementById('generatorForm');
         const formData = new FormData(form);
-        
+
         // Validate required fields
         const projectName = formData.get('project_name')?.trim();
         const siteName = formData.get('site_name')?.trim();
@@ -281,7 +281,7 @@ class TestFoundryUI {
         document.getElementById('configCard').classList.add('hidden');
         document.getElementById('validationCard').classList.add('hidden');
         document.getElementById('progressCard').classList.remove('hidden');
-        
+
         // Initialize progress display
         document.getElementById('progressFill').style.width = '0%';
         document.getElementById('progressPercent').textContent = '0%';
@@ -294,22 +294,22 @@ class TestFoundryUI {
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/${this.currentJobId}`;
-        
+
         this.websocket = new WebSocket(wsUrl);
-        
+
         this.websocket.onopen = () => {
             console.log('WebSocket connected');
         };
-        
+
         this.websocket.onmessage = (event) => {
             const progress = JSON.parse(event.data);
             this.updateProgress(progress);
         };
-        
+
         this.websocket.onerror = (error) => {
             console.error('WebSocket error:', error);
         };
-        
+
         this.websocket.onclose = () => {
             console.log('WebSocket disconnected');
         };
@@ -334,7 +334,7 @@ class TestFoundryUI {
 
     updateProgressSteps(steps) {
         const stepsContainer = document.getElementById('progressSteps');
-        
+
         stepsContainer.innerHTML = steps.map(step => `
             <div class="progress-step ${step.status}">
                 <div class="step-icon ${step.status}">
@@ -363,17 +363,17 @@ class TestFoundryUI {
 
     async onGenerationComplete(progress) {
         this.closeWebSocket();
-        
+
         // Hide progress, show results
         document.getElementById('progressCard').classList.add('hidden');
         document.getElementById('resultsCard').classList.remove('hidden');
-        
+
         // Load project files
         await this.loadProjectFiles();
-        
+
         // Show summary
         this.displayResultSummary(progress);
-        
+
         this.showSuccess('Framework generated successfully! 🎉');
     }
 
@@ -388,9 +388,9 @@ class TestFoundryUI {
         try {
             const response = await fetch(`/api/jobs/${this.currentJobId}/files`);
             const projectStructure = await response.json();
-            
+
             this.displayProjectFiles(projectStructure);
-            
+
         } catch (error) {
             console.error('Failed to load project files:', error);
         }
@@ -398,10 +398,18 @@ class TestFoundryUI {
 
     displayResultSummary(progress) {
         const summaryDiv = document.getElementById('resultSummary');
-        
+
+        const projectPath = progress.project_path || 'Not available';
+        const pathDisplay = projectPath ?
+            `<div class="project-path">
+                <strong><i class="fas fa-folder-open"></i> Project Location:</strong><br>
+                <code class="path-text">${projectPath}</code>
+            </div>` : '';
+
         summaryDiv.innerHTML = `
             <h4><i class="fas fa-check-circle text-success"></i> Generation Completed Successfully</h4>
             <p>${progress.message}</p>
+            ${pathDisplay}
             <div class="result-stats">
                 <div class="stat">
                     <div class="stat-number">${progress.created_files.length}</div>
@@ -421,7 +429,7 @@ class TestFoundryUI {
 
     displayProjectFiles(projectStructure) {
         const explorerDiv = document.getElementById('fileExplorer');
-        
+
         const html = `
             <h5><i class="fas fa-folder"></i> Project: ${projectStructure.project_name}</h5>
             <p><strong>${projectStructure.total_files}</strong> files created (${this.formatFileSize(projectStructure.total_size)})</p>
@@ -435,15 +443,15 @@ class TestFoundryUI {
                 `).join('')}
             </ul>
         `;
-        
+
         explorerDiv.innerHTML = html;
     }
 
     getFileIcon(type, name) {
         if (type === 'directory') return 'fas fa-folder';
-        
+
         const extension = name.split('.').pop()?.toLowerCase();
-        
+
         switch (extension) {
             case 'py': return 'fab fa-python';
             case 'yml':
@@ -468,7 +476,7 @@ class TestFoundryUI {
 
         try {
             const response = await fetch(`/api/jobs/${this.currentJobId}/download`);
-            
+
             if (!response.ok) {
                 throw new Error('Download failed');
             }
@@ -483,9 +491,9 @@ class TestFoundryUI {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            
+
             this.showSuccess('Project downloaded successfully!');
-            
+
         } catch (error) {
             console.error('Download error:', error);
             this.showError('Failed to download project');
@@ -497,19 +505,19 @@ class TestFoundryUI {
         document.getElementById('resultsCard').classList.add('hidden');
         document.getElementById('progressCard').classList.add('hidden');
         document.getElementById('validationCard').classList.add('hidden');
-        
+
         // Show config card
         document.getElementById('configCard').classList.remove('hidden');
-        
+
         // Reset form
         document.getElementById('generatorForm').reset();
         document.getElementById('presetSelect').value = '';
         document.getElementById('loadPresetBtn').disabled = true;
-        
+
         // Reset state
         this.currentJobId = null;
         this.closeWebSocket();
-        
+
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
