@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TestFoundry</title>
     <link rel="icon" type="image/png" href="/static/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -65,7 +68,7 @@
                             <label class="section-label">Test Types</label>
                             <div class="checkbox-grid">
                                 <div class="checkbox-item">
-                                    <input type="checkbox" id="accessibility" name="test_types" value="accessibility">
+                                    <input type="checkbox" id="accessibility" name="test_types" value="accessibility" checked>
                                     <label for="accessibility">
                                         <i class="fas fa-universal-access"></i>
                                         <span>Accessibility Testing</span>
@@ -73,7 +76,7 @@
                                     </label>
                                 </div>
                                 <div class="checkbox-item">
-                                    <input type="checkbox" id="lighthouse" name="test_types" value="lighthouse">
+                                    <input type="checkbox" id="lighthouse" name="test_types" value="lighthouse" checked>
                                     <label for="lighthouse">
                                         <i class="fas fa-tachometer-alt"></i>
                                         <span>Performance Testing</span>
@@ -81,7 +84,7 @@
                                     </label>
                                 </div>
                                 <div class="checkbox-item">
-                                    <input type="checkbox" id="brokenLinks" name="test_types" value="broken_links">
+                                    <input type="checkbox" id="brokenLinks" name="test_types" value="broken_links" checked>
                                     <label for="brokenLinks">
                                         <i class="fas fa-link"></i>
                                         <span>Broken Links</span>
@@ -89,7 +92,7 @@
                                     </label>
                                 </div>
                                 <div class="checkbox-item">
-                                    <input type="checkbox" id="seo" name="test_types" value="seo">
+                                    <input type="checkbox" id="seo" name="test_types" value="seo" checked>
                                     <label for="seo">
                                         <i class="fas fa-search"></i>
                                         <span>SEO Testing</span>
@@ -112,7 +115,7 @@
                             </div>
                             <div class="form-group">
                                 <div class="checkbox-item">
-                                    <input type="checkbox" id="githubActions" name="github_actions">
+                                    <input type="checkbox" id="githubActions" name="github_actions" checked>
                                     <label for="githubActions">
                                         <i class="fab fa-github"></i>
                                         <span>GitHub Actions CI/CD</span>
