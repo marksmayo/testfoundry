@@ -291,17 +291,17 @@ async def run_generation(job_id: str, config: GeneratorConfig):
             await update_step(job_id, 5, GenerationStatus.COMPLETED, "CI/CD skipped")
         await asyncio.sleep(0.1)
 
-        # Collect created files with delay for visual feedback
+        # Collect created files quickly (no artificial delay)
+        # Also surface a clear finalizing message at 100%
+        job.message = "Finalizing project files..."
+        await notify_websockets(job_id, job)
+
         created_files = []
         if project_path.exists():
-            file_count = 0
             for file_path in project_path.rglob("*"):
                 if file_path.is_file():
                     rel_path = file_path.relative_to(project_path)
                     created_files.append(str(rel_path))
-                    file_count += 1
-                    # Add delay between files for visual feedback
-                    await asyncio.sleep(0.1)
 
         # Mark job as completed
         job.status = GenerationStatus.COMPLETED

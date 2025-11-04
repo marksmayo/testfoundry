@@ -326,9 +326,40 @@ class TestFoundryUI {
 
         // Check if completed
         if (progress.status === 'completed') {
+            // Clear any pending completion guard
+            if (this._completionGuardTimer) {
+                clearTimeout(this._completionGuardTimer);
+                this._completionGuardTimer = null;
+            }
             this.onGenerationComplete(progress);
         } else if (progress.status === 'failed') {
+            if (this._completionGuardTimer) {
+                clearTimeout(this._completionGuardTimer);
+                this._completionGuardTimer = null;
+            }
             this.onGenerationFailed(progress);
+        } else if (progress.progress_percent >= 100) {
+            // Client-side fallback: if we hit 100% but no completed event,
+            // poll once after a short delay and proceed if completed.
+            if (!this._completionGuardTimer) {
+                this._completionGuardTimer = setTimeout(async () => {
+                    try {
+                        const resp = await fetch(`/api/jobs/${this.currentJobId}`);
+                        if (resp.ok) {
+                            const latest = await resp.json();
+                            if (latest.status === 'completed') {
+                                this.onGenerationComplete(latest);
+                            } else if (latest.status === 'failed') {
+                                this.onGenerationFailed(latest);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Completion guard check failed', e);
+                    } finally {
+                        this._completionGuardTimer = null;
+                    }
+                }, 2000);
+            }
         }
     }
 
@@ -402,12 +433,14 @@ class TestFoundryUI {
         const projectPath = progress.project_path || 'Not available';
         const pathDisplay = projectPath ?
             `<div class="project-path">
-                <strong><i class="fas fa-folder-open"></i> Project Location:</strong><br>
-                <code class="path-text">${projectPath}</code>
-                <button class="btn btn-icon btn-copy-path" title="Copy path" aria-label="Copy path"
-                    onclick="navigator.clipboard && navigator.clipboard.writeText('${projectPath.replace(/\\/g, "\\\\")}').then(() => window.testFoundryUI?.showSuccess('Path copied to clipboard')).catch(()=>window.testFoundryUI?.showError('Failed to copy path'))">
-                    <i class="fas fa-clipboard"></i>
-                </button>
+                <strong class="project-path-label"><i class="fas fa-folder-open"></i> Project Location:</strong>
+                <div class="project-path-row">
+                    <code class="path-text">${projectPath}</code>
+                    <button class="btn btn-icon btn-copy-path" title="Copy path" aria-label="Copy path"
+                        onclick="navigator.clipboard && navigator.clipboard.writeText('${projectPath.replace(/\\/g, "\\\\")}').then(() => window.testFoundryUI?.showSuccess('Path copied to clipboard')).catch(()=>window.testFoundryUI?.showError('Failed to copy path'))">
+                        <i class="fas fa-clipboard"></i>
+                    </button>
+                </div>
             </div>` : '';
 
         summaryDiv.innerHTML = `

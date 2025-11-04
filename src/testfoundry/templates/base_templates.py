@@ -34,6 +34,7 @@ import sys
 import webbrowser
 from pathlib import Path
 import pytest_html
+from datetime import datetime
 
 # Playwright configuration
 @pytest.fixture(scope="session")
@@ -70,6 +71,10 @@ def pytest_configure(config):
     \"\"\"Configure pytest and add custom CSS/logo to HTML report\"\"\"
     # Disable sensitive URL protection from pytest-base-url
     config.addinivalue_line("markers", "nondestructive: mark test as nondestructive")
+    
+    # Add base URL to environment metadata
+    if hasattr(config, '_metadata'):
+        config._metadata['Base URL'] = '{base_url}'
 
     # Add custom CSS to HTML report
     if hasattr(config, '_html'):
@@ -109,6 +114,34 @@ def pytest_configure(config):
                 background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             }}
+            table.results-table {{
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0 6px;
+            }}
+            table.results-table thead tr th {{
+                background: #ffffff;
+                color: #1f2937;
+                font-weight: 600;
+                border: none;
+            }}
+            table.results-table tbody tr {{
+                background: #ffffff;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.05);
+            }}
+            table.results-table tbody tr:hover {{
+                transform: translateY(-1px);
+                transition: transform 0.1s ease;
+            }}
+            .passed {{ color: #059669 !important; }}
+            .failed {{ color: #dc2626 !important; }}
+            .skipped {{ color: #d97706 !important; }}
+            .summary, .log {{
+                background: #ffffff;
+                border-radius: 8px;
+                padding: 12px 16px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.05);
+            }}
         </style>
         '''
 
@@ -118,19 +151,126 @@ def pytest_configure(config):
         if logo_base64:
             config._html.logo_base64 = logo_base64
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    \"\"\"Attach Playwright screenshots to pytest-html on failure\"\"\"
+    outcome = yield
+    report = outcome.get_result()
+
+    # Only capture at call phase and on failures
+    if report.when != "call":
+        return
+
+    try:
+        extra = getattr(report, 'extra', [])
+    except Exception:
+        extra = []
+
+    failed = report.failed and not getattr(report, 'wasxfail', False)
+    if failed:
+        page = None
+        try:
+            page = item.funcargs.get("page")
+        except Exception:
+            page = None
+
+        if page:
+            screenshots_dir = Path("reports") / "screenshots"
+            screenshots_dir.mkdir(parents=True, exist_ok=True)
+            # Create a filename-safe name (avoid backslash escaping issues)
+            node_name = item.nodeid.replace("::", "_").replace("/", "_").replace(chr(92), "_")
+            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+            screenshot_path = screenshots_dir / f"{{node_name}}-{{ts}}.png"
+            try:
+                page.screenshot(path=str(screenshot_path), full_page=True)
+                # Read screenshot and embed as data URL to avoid path issues
+                try:
+                    import base64 as _tf_b64
+                    data = Path(str(screenshot_path)).read_bytes()
+                    b64 = _tf_b64.b64encode(data).decode('utf-8')
+                    extra.append(pytest_html.extras.html(f"<div class='tf-screenshot'><img alt='screenshot' src='data:image/png;base64,{{b64}}' /></div>"))
+                except Exception:
+                    # Fallback to path-based embedding
+                    extra.append(pytest_html.extras.image(str(screenshot_path)))
+            except Exception as e:
+                extra.append(pytest_html.extras.text(f"Screenshot capture failed: {{e}}", name="screenshot_error"))
+
+        report.extra = extra
+
 def pytest_html_results_summary(prefix, summary, postfix, session):
     \"\"\"Add custom header with logo to HTML report summary\"\"\"
+    # Load and encode logo
     logo_html = ""
-    if hasattr(session.config, '_html') and hasattr(session.config._html, 'logo_base64'):
-        logo_base64 = session.config._html.logo_base64
-        logo_html = f"<img src='data:image/png;base64,{{logo_base64}}' alt='TestFoundry' class='testfoundry-logo'>"
+    logo_path = Path("assets/logo.png")
+    if logo_path.exists():
+        try:
+            import base64
+            logo_data = logo_path.read_bytes()
+            logo_base64 = base64.b64encode(logo_data).decode('utf-8')
+            logo_html = f"<img class='testfoundry-logo' src='data:image/png;base64,{{logo_base64}}' alt='TestFoundry'>"
+        except Exception as e:
+            pass
 
-    prefix.insert(0, f'''
+    # Custom CSS and header - note the body styling to push content down
+    custom_css_and_header = f'''
+    <style>
+        body {{{{
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }}}}
+        .testfoundry-header {{{{
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin: 0 0 20px 0;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+        }}}}
+        .testfoundry-logo {{{{
+            height: 60px;
+            margin-right: 15px;
+            vertical-align: middle;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }}}}
+        .testfoundry-title {{{{
+            display: inline-block;
+            vertical-align: middle;
+            font-size: 2em;
+            margin: 0;
+            font-weight: 700;
+        }}}}
+        .tf-screenshot img {{{{
+            max-width: 100%;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin: 8px 0;
+        }}}}
+        /* Move the header to top using JavaScript */
+    </style>
     <div class="testfoundry-header">
         {{logo_html}}
         <h1 class="testfoundry-title">TestFoundry Test Report</h1>
     </div>
-    ''')
+    <script>
+        // Move the header to the very top of the body when page loads
+        document.addEventListener('DOMContentLoaded', function() {{{{
+            var header = document.querySelector('.testfoundry-header');
+            if (header) {{{{
+                document.body.insertBefore(header, document.body.firstChild);
+            }}}}
+        }}}});
+    </script>
+    '''
+    
+    # Insert at the very beginning
+    prefix.insert(0, custom_css_and_header)
 
 # Auto-open HTML report after tests complete
 def pytest_sessionfinish(session, exitstatus):

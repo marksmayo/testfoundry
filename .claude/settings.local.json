@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python test:*)"
+      "Bash(python test:*)",
+      "Bash(python:*)",
+      "Bash(where python)",
+      "Bash(pip install:*)",
+      "Bash(rm:*)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []

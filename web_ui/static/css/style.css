@@ -496,6 +496,40 @@ body {
     color: #999;
 }
 
+/* Result summary project path */
+.project-path {
+    margin: 1rem 0;
+}
+.project-path-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #2c3e50;
+}
+.project-path-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+}
+.project-path-row .path-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    display: inline-block;
+}
+.btn-icon {
+    padding: 0.5rem;
+    min-width: auto;
+}
+.btn-copy-path {
+    background: #e9ecef;
+    color: #343a40;
+}
+.btn-copy-path:hover {
+    background: #dee2e6;
+}
+
 /* Validation Results */
 .validation-success {
     background: #d4edda;

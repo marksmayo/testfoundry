@@ -52,12 +52,22 @@ class BaseGenerator:
         file_path.write_text(content, encoding='utf-8')
 
     def copy_logo_file(self, project_path: Path) -> None:
-        """Copy TestFoundry logo to the project"""
-        # Find the logo file relative to this generator
-        generator_root = Path(__file__).parent.parent.parent.parent
-        logo_source = generator_root / "logo.png"
+        """Copy TestFoundry logo to the project, trying multiple source locations"""
+        candidates = []
+        try:
+            generator_root = Path(__file__).parent.parent.parent.parent
+            candidates.append(generator_root / "logo.png")
+        except Exception:
+            pass
 
-        if logo_source.exists():
+        # Also try alongside this module (packaged asset scenario)
+        candidates.append(Path(__file__).parent / "logo.png")
+
+        # Fallback to web UI static asset if present
+        candidates.append(Path(__file__).parent.parent.parent.parent / "web_ui" / "static" / "logo.png")
+
+        logo_source = next((p for p in candidates if p.exists()), None)
+        if logo_source:
             logo_dest = project_path / "assets" / "logo.png"
             logo_dest.parent.mkdir(exist_ok=True)
             shutil.copy2(logo_source, logo_dest)
