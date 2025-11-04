@@ -43,7 +43,7 @@
                             <div class="form-group">
                                 <label for="projectName">Project Name <span class="required">*</span></label>
                                 <input type="text" id="projectName" name="project_name" required 
-                                       placeholder="my_website_tests" pattern="[a-zA-Z0-9_-]+">
+                                       placeholder="my_website_tests" pattern="[a-zA-Z0-9_\-]+">
                                 <small class="help-text">3-50 characters, letters, numbers, hyphens, and underscores only</small>
                             </div>
                             <div class="form-group">
@@ -189,7 +189,7 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2024 TestFoundry. Built with FastAPI and Playwright.</p>
+            <p>&copy; <span id="current-year"></span> TestFoundry. Built with FastAPI and Playwright.</p>
         </footer>
     </div>
 
@@ -203,5 +203,12 @@
 
     <!-- Scripts -->
     <script src="/static/js/app.js"></script>
+    <script>
+        // Set current year in footer
+        (function () {
+            var el = document.getElementById('current-year');
+            if (el) el.textContent = new Date().getFullYear();
+        })();
+    </script>
 </body>
 </html>

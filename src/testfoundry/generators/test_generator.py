@@ -90,6 +90,7 @@ class TestBrokenLinks:
     """Broken links and link validation tests"""
     
     @pytest.mark.broken_links
+    @pytest.mark.skip(reason="Disabled by default: enable when ready to validate internal links")
     def test_no_broken_internal_links(self, page: Page, base_url: str):
         """Test that all internal links are working"""
         home_page = HomePage(page, base_url)

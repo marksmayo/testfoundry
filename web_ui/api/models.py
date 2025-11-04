@@ -29,7 +29,7 @@ class GeneratorRequest(BaseModel):
     def validate_project_name(cls, v):
         """Validate project name format"""
         import re
-        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+        if not re.match(r'^[a-zA-Z0-9_\-]+$', v):
             raise ValueError('Project name can only contain letters, numbers, hyphens, and underscores')
 
         reserved_names = {'test', 'tests', 'src', 'lib', 'bin', 'config', 'utils', 'pages'}

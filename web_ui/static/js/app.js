@@ -124,7 +124,7 @@ class TestFoundryUI {
         }
 
         if (fieldName === 'project_name') {
-            const pattern = /^[a-zA-Z0-9_-]+$/;
+            const pattern = /^[a-zA-Z0-9_\-]+$/;
             if (!pattern.test(value)) {
                 input.classList.add('field-error');
                 return false;
@@ -404,6 +404,10 @@ class TestFoundryUI {
             `<div class="project-path">
                 <strong><i class="fas fa-folder-open"></i> Project Location:</strong><br>
                 <code class="path-text">${projectPath}</code>
+                <button class="btn btn-icon btn-copy-path" title="Copy path" aria-label="Copy path"
+                    onclick="navigator.clipboard && navigator.clipboard.writeText('${projectPath.replace(/\\/g, "\\\\")}').then(() => window.testFoundryUI?.showSuccess('Path copied to clipboard')).catch(()=>window.testFoundryUI?.showError('Failed to copy path'))">
+                    <i class="fas fa-clipboard"></i>
+                </button>
             </div>` : '';
 
         summaryDiv.innerHTML = `

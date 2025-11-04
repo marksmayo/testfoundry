@@ -13,7 +13,6 @@ addopts =
     --html=reports/report.html
     --self-contained-html
     -v
-    --nondestructive
 markers =
     accessibility: Accessibility tests
     lighthouse: Lighthouse performance tests
@@ -124,11 +123,11 @@ def pytest_html_results_summary(prefix, summary, postfix, session):
     logo_html = ""
     if hasattr(session.config, '_html') and hasattr(session.config._html, 'logo_base64'):
         logo_base64 = session.config._html.logo_base64
-        logo_html = f"<img src='data:image/png;base64,{logo_base64}' alt='TestFoundry' class='testfoundry-logo'>"
+        logo_html = f"<img src='data:image/png;base64,{{logo_base64}}' alt='TestFoundry' class='testfoundry-logo'>"
 
     prefix.insert(0, f'''
     <div class="testfoundry-header">
-        {logo_html}
+        {{logo_html}}
         <h1 class="testfoundry-title">TestFoundry Test Report</h1>
     </div>
     ''')
